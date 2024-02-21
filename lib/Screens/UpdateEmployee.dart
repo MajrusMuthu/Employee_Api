@@ -1,144 +1,76 @@
-// ignore_for_file: prefer_const_constructors, avoid_print, use_build_context_synchronously, use_super_parameters, unused_element
+// ignore_for_file: prefer_const_constructors, avoid_print, use_build_context_synchronously, unused_element, use_super_parameters
 
 import 'dart:io';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:csc_picker/csc_picker.dart';
+
 import 'package:employee_app/Components/Text_field.dart';
+import 'package:employee_app/Components/dropdownButton.dart';
 import 'package:employee_app/Screens/Home_Page.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:employee_app/Model/EmployeeData.dart';
+import 'package:employee_app/Services/Api_Service.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:firebase_storage/firebase_storage.dart' as firebase_storage;
-
-
-class CSCPickerSelection {
-  final String country;
-  final String state;
-  final String city;
-  final int gender;
-
-  CSCPickerSelection({
-    required this.country,
-    required this.state,
-    required this.city,
-    required this.gender,
-  });
-}
 
 class UpdateEmployee extends StatefulWidget {
-  final String? employeeId;
-  final String? imageUrl;
-  final dynamic designation;
-  final dynamic name;
-  final dynamic email;
-  final int gender;
-  final dynamic address;
-  final dynamic country;
-  final String phoneNumber;
-  final dynamic state;
-  final dynamic city;
-  final Map<String, dynamic> arguments;
+  final DataModel employee;
 
-  const UpdateEmployee({
-    Key? key,
-    required void Function() onTap,
-    required this.employeeId,
-    required this.imageUrl,
-    required this.designation,
-    required this.name,
-    required this.email,
-    required this.gender,
-    required this.address,
-    required this.country,
-    required this.phoneNumber,
-    required this.state,
-    required this.city,
-    required this.arguments,
-  }) : super(key: key);
+  const UpdateEmployee({Key? key, required this.employee}) : super(key: key);
 
   @override
   State<UpdateEmployee> createState() => _UpdateEmployeeState();
 }
 
 class _UpdateEmployeeState extends State<UpdateEmployee> {
-  final CollectionReference employee =
-      FirebaseFirestore.instance.collection('employees');
-  TextEditingController imageurlController = TextEditingController();
-  TextEditingController nameController = TextEditingController();
-  TextEditingController emailController = TextEditingController();
-  TextEditingController designationController = TextEditingController();
-  TextEditingController addressController = TextEditingController();
-  TextEditingController phoneNumberController = TextEditingController();
-  TextEditingController countryController = TextEditingController();
-  TextEditingController stateController = TextEditingController();
-  TextEditingController cityController = TextEditingController();
-  TextEditingController selectedGenderController = TextEditingController();
+  final TextEditingController nameController = TextEditingController();
+  final TextEditingController emailController = TextEditingController();
+  final TextEditingController designationController = TextEditingController();
+  final TextEditingController addressController = TextEditingController();
+  final TextEditingController phoneNumberController = TextEditingController();
 
-  late int selectedGender = 0;
+  String? dropdownValue;
   File? _image;
+  final GlobalKey<ScaffoldMessengerState> _scaffoldMessengerKey =
+      GlobalKey<ScaffoldMessengerState>();
+  final ApiService _apiService = ApiService();
 
+  // Method to clear selected image
   void _clearSelectedImage() {
     setState(() {
       _image = null;
     });
   }
 
-  int _mapGenderToValue(String gender) {
-    switch (gender.toLowerCase()) {
-      case 'male':
-        return 1;
-      case 'female':
-        return 2;
-      case 'others':
-        return 3;
-      default:
-        return 0;
+  // Method to pick an image from gallery
+  Future<void> _pickImage() async {
+    final picker = ImagePicker();
+    final pickedImage = await picker.pickImage(source: ImageSource.gallery);
+
+    if (pickedImage != null) {
+      setState(() {
+        _image = File(pickedImage.path);
+      });
     }
   }
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-
-    final args = widget.arguments;
-    String? employeeId = args['employeeId'];
-    print('Employee ID(U): $employeeId');
-    nameController.text = args['name'] ?? '';
-    emailController.text = args['email'] ?? '';
-    designationController.text = args['designation'] ?? '';
-
-    if (args['gender'] != null && args['gender'] is int) {
-      selectedGender = args['gender'] as int;
-    }
-
-    addressController.text = args['address'] ?? '';
-    phoneNumberController.text = args['phoneNumber'] ?? '';
-    String? country = args['country'];
-    String? state = args['state'];
-    String? city = args['city'];
-
-    CSCPickerSelection initialSelection = CSCPickerSelection(
-      country: country ?? '',
-      state: state ?? '',
-      city: city ?? '',
-      gender: selectedGender,
-    );
-    // Set the values for controllers
-    countryController.text = initialSelection.country;
-    stateController.text = initialSelection.state;
-    cityController.text = initialSelection.city;
-    // Set the initial gender value
-    selectedGenderController.text = initialSelection.gender.toString();
-    imageurlController.text = args['imageUrl'] ?? '';
+  void initState() {
+    super.initState();
+    // Initialize controllers with employee data
+    nameController.text = widget.employee.name ?? '';
+    emailController.text = widget.employee.email ?? '';
+    designationController.text = widget.employee.designation ?? '';
+    addressController.text = widget.employee.address ?? '';
+    phoneNumberController.text = widget.employee.phoneNumber ?? '';
+    dropdownValue = widget.employee.gender ?? '';
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      key: _scaffoldMessengerKey,
       backgroundColor: Colors.black,
       appBar: AppBar(
         title: Text(
-          "Update an Employee Profile",
+          "Update Employee Profile",
           style: TextStyle(color: Colors.white, fontSize: 20),
         ),
         backgroundColor: Colors.black,
@@ -150,42 +82,23 @@ class _UpdateEmployeeState extends State<UpdateEmployee> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(5.0),
-                        ),
-                        backgroundColor: Colors.black,
-                      ),
-                      onPressed: () async {
-                        await _pickImage();
-                      },
-                      child: const Text(
-                        'Select Image',
-                        style: TextStyle(color: Colors.white),
-                      ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(5.0),
                     ),
-                    SizedBox(width: 20),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(5.0),
-                        ),
-                        backgroundColor: Colors.black,
-                      ),
-                      onPressed: () {
-                        _clearSelectedImage();
-                      },
-                      child: const Text(
-                        'Clear Image',
-                        style: TextStyle(color: Colors.white),
-                      ),
-                    ),
-                  ],
+                    backgroundColor: Colors.black,
+                  ),
+                  onPressed: () async {
+                    await _pickImage();
+                  },
+                  child: const Text(
+                    'Select Image',
+                    style: TextStyle(color: Colors.white),
+                  ),
                 ),
+                SizedBox(width: 20),
+                // Display selected image
                 _image != null
                     ? Padding(
                         padding: const EdgeInsets.all(8.0),
@@ -197,14 +110,24 @@ class _UpdateEmployeeState extends State<UpdateEmployee> {
                         ),
                       )
                     : Container(),
-                SizedBox(height: 20),
-                MyTextField(
-                  hintText: 'Image Url',
-                  obscureText: false,
-                  controller: imageurlController,
-                  keyboardType: TextInputType.url,
+                SizedBox(width: 20),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(5.0),
+                    ),
+                    backgroundColor: Colors.black,
+                  ),
+                  onPressed: () {
+                    _clearSelectedImage();
+                  },
+                  child: const Text(
+                    'Clear Image',
+                    style: TextStyle(color: Colors.white),
+                  ),
                 ),
-                SizedBox(height: 10),
+
+                SizedBox(height: 20),
                 MyTextField(
                   hintText: 'Name',
                   obscureText: false,
@@ -219,99 +142,56 @@ class _UpdateEmployeeState extends State<UpdateEmployee> {
                   keyboardType: TextInputType.emailAddress,
                 ),
                 SizedBox(height: 10),
-                SizedBox(
-                  width: double.infinity,
-                  child: Column(
-                    children: [
-                      Text(
-                        "Gender :",
-                        style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 17,
-                            fontWeight: FontWeight.bold),
-                      ),
-                      Row(
-                        children: [
-                          Flexible(
-                            flex: 1,
-                            child: _buildGenderRadioButton(1, 'Male'),
-                          ),
-                          Flexible(
-                            flex: 1,
-                            child: _buildGenderRadioButton(2, 'Female'),
-                          ),
-                          Flexible(
-                            flex: 1,
-                            child: _buildGenderRadioButton(3, 'Others'),
-                          ),
-                        ],
-                      ),
-                      MyTextField(
-                        hintText: 'Designation',
-                        obscureText: false,
-                        controller: designationController,
-                        keyboardType: TextInputType.text,
-                      ),
-                      SizedBox(height: 10),
-                      MyTextField(
-                        hintText: 'Address',
-                        obscureText: false,
-                        controller: addressController,
-                        keyboardType: TextInputType.streetAddress,
-                      ),
-                      SizedBox(height: 10),
-                      MyTextField(
-                        hintText: 'Phone Number',
-                        obscureText: false,
-                        keyboardType: TextInputType.number,
-                        controller: phoneNumberController,
-                      ),
-                      SizedBox(height: 20),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 15.0),
-                        child: CSCPicker(
-                          flagState: CountryFlag.ENABLE,
-                          disabledDropdownDecoration: _getPickerBoxDecoration(),
-                          dropdownDecoration: _getPickerBoxDecoration(),
-                          onCountryChanged: (country) {
-                            setState(() {
-                              countryController.text = country;
-                            });
-                          },
-                          onStateChanged: (state) {
-                            setState(() {
-                              stateController.text = state ?? '';
-                            });
-                          },
-                          onCityChanged: (city) {
-                            setState(() {
-                              cityController.text = city ?? '';
-                            });
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
+                MyDropdownField(
+                  items: ["Male", "Female", "Other"],
+                  hintText: "Gender",
+                  value: dropdownValue,
+                  onChanged: (newValue) {
+                    setState(() {
+                      dropdownValue = newValue;
+                    });
+                  },
+                ),
+
+                SizedBox(height: 10),
+                MyTextField(
+                  hintText: 'Designation',
+                  obscureText: false,
+                  controller: designationController,
+                  keyboardType: TextInputType.text,
+                ),
+                SizedBox(height: 10),
+                MyTextField(
+                  hintText: 'Address',
+                  obscureText: false,
+                  controller: addressController,
+                  keyboardType: TextInputType.streetAddress,
+                ),
+                SizedBox(height: 10),
+                MyTextField(
+                  hintText: 'Phone Number',
+                  obscureText: false,
+                  keyboardType: TextInputType.number,
+                  controller: phoneNumberController,
                 ),
                 SizedBox(height: 50),
                 ElevatedButton(
-                  onPressed: () {
-                    if (widget.employeeId != null &&
-                        widget.employeeId!.isNotEmpty) {
-                      _uploadImageAndData();
-                    } else {
-                      print('Error: widget.employeeId is null (U).');
-                    }
-                  },
-                  style: _getButtonStyle(),
-                  child: Text(
-                    "Update Profile",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  style: ButtonStyle(
+                    backgroundColor:
+                        MaterialStateProperty.all<Color>(Colors.grey),
+                    fixedSize: MaterialStateProperty.all<Size>(Size(200, 50)),
                   ),
+                  child: Text(
+                    "SUBMIT",
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold),
+                  ),
+                  onPressed: () async {
+                    _updateEmployee();
+                    _showSuccessMessage();
+                  },
                 ),
               ],
             ),
@@ -321,125 +201,67 @@ class _UpdateEmployeeState extends State<UpdateEmployee> {
     );
   }
 
-  Widget _buildGenderRadioButton(int value, String label) {
-    return Row(
-      children: [
-        Radio(
-          activeColor: Colors.white,
-          value: value,
-          groupValue: selectedGender,
-          onChanged: (value) {
-            setState(() {
-              selectedGender = value as int;
-            });
-          },
-        ),
-        Expanded(
-          child: Text(
-            label,
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 15,
-              fontWeight: FontWeight.bold,
+  Future<void> _updateEmployee() async {
+    DataModel updatedEmployee = DataModel(
+      id: widget.employee.id,
+      name: nameController.text,
+      email: emailController.text,
+      designation: designationController.text,
+      address: addressController.text,
+      phoneNumber: phoneNumberController.text,
+      gender: dropdownValue!,
+      imageUrl: _image != null ? _image!.path : widget.employee.imageUrl,
+    );
+
+    try {
+      await _apiService.updateEmployee(widget.employee.id!, updatedEmployee);
+
+      if (mounted) {
+        if (_scaffoldMessengerKey.currentState != null) {
+          _scaffoldMessengerKey.currentState!.showSnackBar(
+            SnackBar(
+              content: Text('Employee updated successfully'),
+              backgroundColor: Colors.green,
             ),
+          );
+        }
+        _showSuccessMessage();
+      }
+    } catch (e) {
+      if (mounted) {
+        if (_scaffoldMessengerKey.currentState != null) {
+          _scaffoldMessengerKey.currentState!.showSnackBar(
+            SnackBar(
+              content: Text('Failed to update employee: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  void _showSuccessMessage() {
+    if (mounted) {
+      if (_scaffoldMessengerKey.currentState != null) {
+        _scaffoldMessengerKey.currentState!.showSnackBar(
+          SnackBar(
+            content: Text('Employee information updated successfully.'),
+            duration: Duration(seconds: 1),
+            backgroundColor: Colors.green,
           ),
-        ),
-      ],
-    );
-  }
+        );
+      }
 
-  BoxDecoration _getPickerBoxDecoration() {
-    return BoxDecoration(
-      borderRadius: const BorderRadius.all(Radius.circular(30)),
-      color: Colors.grey.shade600,
-      border: Border.all(
-        color: Colors.white,
-        width: 1,
-      ),
-    );
-  }
-
-  ButtonStyle _getButtonStyle() {
-    return ButtonStyle(
-      backgroundColor: MaterialStateProperty.all<Color>(Colors.grey),
-      fixedSize: MaterialStateProperty.all<Size>(Size(200, 50)),
-    );
-  }
-
-  Future<void> _pickImage() async {
-    final picker = ImagePicker();
-    final pickedImage = await picker.pickImage(source: ImageSource.gallery);
-
-    if (pickedImage != null) {
-      setState(() {
-        _image = File(pickedImage.path);
+      Future.delayed(Duration(seconds: 2), () {
+        if (mounted) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (context) => HomePage(),
+            ),
+          );
+        }
       });
     }
-  }
-
-Future<void> _uploadImageAndData() async {
-  try {
-    if (_image != null && widget.employeeId != null && widget.employeeId!.isNotEmpty) {
-      // Upload image to Firebase Storage
-      Reference ref = firebase_storage.FirebaseStorage.instance
-          .ref()
-          .child('employee_images')
-          .child('${DateTime.now().millisecondsSinceEpoch}.jpg');
-      UploadTask uploadTask = ref.putFile(_image!);
-      
-      // Get download URL of the uploaded image
-      TaskSnapshot snapshot = await uploadTask;
-      String downloadUrl = await snapshot.ref.getDownloadURL();
-
-      // Update employee data in Firestore
-      await FirebaseFirestore.instance
-          .collection('employees')
-          .doc(widget.employeeId)
-          .set({
-        'name': nameController.text,
-        'email': emailController.text,
-        'designation': designationController.text,
-        'address': addressController.text,
-        'phoneNumber': phoneNumberController.text,
-        'country': countryController.text,
-        'state': stateController.text,
-        'city': cityController.text,
-        'gender': selectedGender,
-        'imageUrl': downloadUrl, // Store image URL in Firestore
-      }, SetOptions(merge: true));
-
-      // Clear form fields and show success dialog
-      _clearFormFields();
-    } else {
-      print('Error: Image or widget.employeeId is null or empty.');
-    }
-  } catch (error) {
-    print('Error updating employee data: $error');
-  }
-}
-
-
-  void _clearFormFields() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Success'),
-          content: Text('Employee information updated successfully.'),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pushReplacement(
-                  MaterialPageRoute(
-                    builder: (context) => HomePage(),
-                  ),
-                );
-              },
-              child: Text('OK'),
-            ),
-          ],
-        );
-      },
-    );
   }
 }

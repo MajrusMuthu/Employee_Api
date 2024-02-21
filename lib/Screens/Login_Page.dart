@@ -129,7 +129,7 @@ class _LoginPageState extends State<LoginPage> {
                   keyboardType: TextInputType.emailAddress,
                 ),
                 const SizedBox(height: 10),
-                MyTextField(
+                MyTextField(    
                   controller: passwordController,
                   hintText: "Password",
                   obscureText: true,

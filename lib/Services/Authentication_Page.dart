@@ -1,5 +1,5 @@
 import 'package:employee_app/Screens/Home_Page.dart';
-import 'package:employee_app/Screens/LoginOrRegisterPage.dart';
+import 'package:employee_app/Services/LoginOrRegisterPage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
