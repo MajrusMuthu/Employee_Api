@@ -1,11 +1,11 @@
 // ignore_for_file: use_rethrow_when_possible, avoid_print, prefer_const_declarations
 
 import 'dart:convert';
-import 'package:employee_app/Model/EmployeeData.dart';
+import 'package:employee_app/model/EmployeeData.dart';
 import 'package:http/http.dart' as http;
 
 class ApiService {
-  final String apiUrl = 'https://crudcrud.com/api/3079b3165486461db5e1c44f6abf7b12/unicorns';
+  final String apiUrl = 'https://crudcrud.com/api/1729e8e51155498ea3bee5b9a676da25/unicorns';
 
   Future<List<DataModel>> fetchEmployees() async {
     try {
@@ -26,8 +26,8 @@ class ApiService {
   Future<DataModel> addEmployee(DataModel employee) async {
     try {
       final response = await http.post(
-        Uri.parse(apiUrl),
-        headers: {'Content-Type': 'application/json'},
+        Uri.parse(apiUrl),// it is used to convert the API URL string into a Uri.
+        headers: {'Content-Type': 'application/json'},// specify the content type as JSON.
         body: jsonEncode(employee.toJson()),
       );
 
@@ -45,13 +45,13 @@ class ApiService {
 Future<DataModel> updateEmployee(String id, DataModel updatedEmployee) async {
   try {
     final response = await http.put(
-      Uri.parse('$apiUrl/$id'),
+      Uri.parse('$apiUrl/$id'),//constructs the complete URL for updating the specific employee.
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode(updatedEmployee.toJson()),
     );
 
     if (response.statusCode == 200) {
-      return DataModel.fromJson(json.decode(response.body));
+      return DataModel.fromJson(json.decode(response.body));//This constructor is responsible for creating a DataModel object from JSON data.
     } else {
       throw Exception('Failed to update employee. Status code: ${response.statusCode}');
     }
@@ -61,12 +61,6 @@ Future<DataModel> updateEmployee(String id, DataModel updatedEmployee) async {
   }
 }
 
-
-
-
-
-
-
 Future<void> deleteEmployee(String id) async {
   try {
     final response = await http.delete(
@@ -75,11 +69,11 @@ Future<void> deleteEmployee(String id) async {
 
     if (response.statusCode == 200 || response.statusCode == 204) {
       print('Employee with ID $id deleted successfully!');
-      // You can perform any additional actions here, such as notifying listeners
+      
     } else if (response.statusCode == 404) {
       throw Exception('Employee with ID $id not found');
     } else {
-      // Handle other status codes gracefully
+      
       throw Exception('Failed to delete employee. Status code: ${response.statusCode}');
     }
   } catch (e) {

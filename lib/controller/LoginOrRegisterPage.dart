@@ -1,8 +1,7 @@
 // ignore_for_file: prefer_const_constructors
 
-
-import 'package:employee_app/Screens/Login_Page.dart';
-import 'package:employee_app/Screens/Register_Page.dart';
+import 'package:employee_app/view/Login_Page.dart';
+import 'package:employee_app/view/Register_Page.dart';
 import 'package:flutter/material.dart';
 
 class LoginOrRegisterPage extends StatefulWidget {
@@ -19,10 +18,9 @@ class _LoginOrRegisterPageState extends State<LoginOrRegisterPage> {
   //toggle between login and register page
 
   void togglePages() {
-    setState(() {
-      showLoginPage = !showLoginPage;
-    });
+    showLoginPage = !showLoginPage;
   }
+
   @override
   Widget build(BuildContext context) {
     if (showLoginPage) {

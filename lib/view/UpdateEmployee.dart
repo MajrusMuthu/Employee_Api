@@ -1,64 +1,61 @@
-// ignore_for_file: prefer_const_constructors, avoid_print, use_build_context_synchronously, unused_element, use_super_parameters
+// ignore_for_file: prefer_const_constructors
 
 import 'dart:io';
 
-
-import 'package:employee_app/Components/Text_field.dart';
-import 'package:employee_app/Components/dropdownButton.dart';
-import 'package:employee_app/Model/EmployeeData.dart';
-import 'package:employee_app/Screens/Home_Page.dart';
-import 'package:employee_app/Services/Api_Service.dart';
+import 'package:employee_app/controller/provider/dropdownProvider.dart';
+import 'package:employee_app/controller/provider/selectImageProvider.dart';
+import 'package:employee_app/view/widget/Text_field.dart';
+import 'package:employee_app/view/widget/dropdownButton.dart';
+import 'package:employee_app/view/Home_Page.dart';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
+import 'package:employee_app/model/EmployeeData.dart';
+import 'package:employee_app/controller/Api_Service.dart';
 
-class EmployeeAdd extends StatefulWidget {
-  const EmployeeAdd({Key? key, required Null Function() onTap})
-      : super(key: key);
+import 'package:provider/provider.dart';
+
+class UpdateEmployee extends StatefulWidget {
+  final DataModel employee;
+
+  const UpdateEmployee({Key? key, required this.employee}) : super(key: key);
 
   @override
-  State<EmployeeAdd> createState() => _EmployeeAddState();
+  State<UpdateEmployee> createState() => _UpdateEmployeeState();
 }
 
-// Define the state for AddEmployee StatefulWidget
-class _EmployeeAddState extends State<EmployeeAdd> {
+class _UpdateEmployeeState extends State<UpdateEmployee> {
   final TextEditingController nameController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
   final TextEditingController designationController = TextEditingController();
   final TextEditingController addressController = TextEditingController();
   final TextEditingController phoneNumberController = TextEditingController();
+
   String? dropdownValue;
-  File? _image;
-   final GlobalKey<ScaffoldMessengerState> _scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
+  final GlobalKey<ScaffoldMessengerState> _scaffoldMessengerKey =
+      GlobalKey<ScaffoldMessengerState>();
   final ApiService _apiService = ApiService();
 
-  // Method to clear selected image
-  void _clearSelectedImage() {
-    setState(() {
-      _image = null;
-    });
-  }
-
-  // Method to pick an image from gallery
-  Future<void> _pickImage() async {
-    final picker = ImagePicker();
-    final pickedImage = await picker.pickImage(source: ImageSource.gallery);
-
-    if (pickedImage != null) {
-      setState(() {
-        _image = File(pickedImage.path);
-      });
-    }
+  @override
+  void initState() {
+    super.initState();
+    // Initialize controllers with employee data
+    nameController.text = widget.employee.name;
+    emailController.text = widget.employee.email;
+    designationController.text = widget.employee.designation;
+    addressController.text = widget.employee.address;
+    phoneNumberController.text = widget.employee.phoneNumber;
+    dropdownValue = widget.employee.gender;
   }
 
   @override
   Widget build(BuildContext context) {
-
+    var imageProvider = SelectImageProvider();
+        Provider.of<DropdownProvider>(context, listen: false);
     return Scaffold(
       key: _scaffoldMessengerKey,
       backgroundColor: Colors.black,
       appBar: AppBar(
         title: Text(
-          "Let's create an Employee Profile",
+          "Update Employee Profile",
           style: TextStyle(color: Colors.white, fontSize: 20),
         ),
         backgroundColor: Colors.black,
@@ -78,7 +75,7 @@ class _EmployeeAddState extends State<EmployeeAdd> {
                     backgroundColor: Colors.black,
                   ),
                   onPressed: () async {
-                    await _pickImage();
+                    await imageProvider.pickImage();
                   },
                   child: const Text(
                     'Select Image',
@@ -87,17 +84,21 @@ class _EmployeeAddState extends State<EmployeeAdd> {
                 ),
                 SizedBox(width: 20),
                 // Display selected image
-                _image != null
-                    ? Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Image.file(
-                          _image!,
-                          width: 150.0,
-                          height: 150.0,
-                          fit: BoxFit.cover,
-                        ),
-                      )
-                    : Container(),
+                Consumer<SelectImageProvider>(
+                  builder: (context, imageProvider, _) {
+                    return imageProvider.image != null
+                        ? Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: Image.file(
+                              imageProvider.image!,
+                              width: 150.0,
+                              height: 150.0,
+                              fit: BoxFit.cover,
+                            ),
+                          )
+                        : Container();
+                  },
+                ),
                 SizedBox(width: 20),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
@@ -107,7 +108,7 @@ class _EmployeeAddState extends State<EmployeeAdd> {
                     backgroundColor: Colors.black,
                   ),
                   onPressed: () {
-                    _clearSelectedImage();
+                    imageProvider.clearSelectedImage();
                   },
                   child: const Text(
                     'Clear Image',
@@ -130,14 +131,16 @@ class _EmployeeAddState extends State<EmployeeAdd> {
                   keyboardType: TextInputType.emailAddress,
                 ),
                 SizedBox(height: 10),
-                MyDropdownField(
-                  items: const ["Male", "Female", "Other"],
-                  hintText: "Gender",
-                  value: dropdownValue,
-                  onChanged: (newValue) {
-                    setState(() {
-                      dropdownValue = newValue;
-                    });
+                Consumer<DropdownProvider>(
+                  builder: (context, dropdownProvider, _) {
+                    return MyDropdownField(
+                      items: const ["Male", "Female", "Other"],
+                      hintText: "Gender",
+                      value: dropdownProvider.dropdownValue,
+                      onChanged: (newValue) {
+                        dropdownProvider.setDropdownValue(newValue);
+                      },
+                    );
                   },
                 ),
 
@@ -170,17 +173,18 @@ class _EmployeeAddState extends State<EmployeeAdd> {
                     fixedSize: MaterialStateProperty.all<Size>(Size(200, 50)),
                   ),
                   child: Text(
-                    "SUBMIT",
+                    "UPDATE",
                     style: TextStyle(
                         color: Colors.white,
                         fontSize: 20,
                         fontWeight: FontWeight.bold),
                   ),
                   onPressed: () async {
-                    _submitEmployeeData();
-                    _showSuccessMessage();
-                    print('Add Employee');
-                    
+                    bool? confirmed = await _showConfirmationDialog();
+                    if (confirmed != null && confirmed) {
+                      _updateEmployee();
+                      _showSuccessMessage();
+                    }
                   },
                 ),
               ],
@@ -191,26 +195,60 @@ class _EmployeeAddState extends State<EmployeeAdd> {
     );
   }
 
+  Future<bool?> _showConfirmationDialog() async {
+    return showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text("Confirm Update"),
+          content: Text("Are you sure you want to update this employee?"),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(false); // Return false if canceled
+              },
+              child: Text("Cancel"),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(true); // Return true if confirmed
+              },
+              child: Text("Confirm"),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
-Future<void> _submitEmployeeData() async {
-  final employee = DataModel(
-    id: '',
-    name: nameController.text,
-    email: emailController.text,
-    gender: dropdownValue ?? '',
-    designation: designationController.text,
-    address: addressController.text,
-    phoneNumber: phoneNumberController.text,
-    imageUrl: _image != null ? _image!.path : '',
-  );
+  Future<void> _updateEmployee() async {
+    var imageProvider =
+        Provider.of<SelectImageProvider>(context, listen: false);
 
-  try {
-      await _apiService.addEmployee(employee);
+    // Get the image from the imageProvider
+    File? updatedImage = imageProvider.image;
+    String? imageUrl =
+        updatedImage != null ? updatedImage.path : widget.employee.imageUrl;
+
+    DataModel updatedEmployee = DataModel(
+      id: widget.employee.id,
+      name: nameController.text,
+      email: emailController.text,
+      designation: designationController.text,
+      address: addressController.text,
+      phoneNumber: phoneNumberController.text,
+      gender: dropdownValue!,
+      imageUrl: imageUrl,
+    );
+
+    try {
+      await _apiService.updateEmployee(widget.employee.id!, updatedEmployee);
+
       if (mounted) {
         if (_scaffoldMessengerKey.currentState != null) {
           _scaffoldMessengerKey.currentState!.showSnackBar(
             SnackBar(
-              content: Text('Employee added successfully'),
+              content: Text('Employee updated successfully'),
               backgroundColor: Colors.green,
             ),
           );
@@ -222,7 +260,7 @@ Future<void> _submitEmployeeData() async {
         if (_scaffoldMessengerKey.currentState != null) {
           _scaffoldMessengerKey.currentState!.showSnackBar(
             SnackBar(
-              content: Text('Failed to add employee: $e'),
+              content: Text('Failed to update employee: $e'),
               backgroundColor: Colors.red,
             ),
           );
@@ -236,7 +274,7 @@ Future<void> _submitEmployeeData() async {
       if (_scaffoldMessengerKey.currentState != null) {
         _scaffoldMessengerKey.currentState!.showSnackBar(
           SnackBar(
-            content: Text('Employee information stored successfully.'),
+            content: Text('Employee information updated successfully.'),
             duration: Duration(seconds: 1),
             backgroundColor: Colors.green,
           ),

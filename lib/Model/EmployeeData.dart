@@ -31,7 +31,7 @@ class DataModel {
       imageUrl: json['imageUrl'] ?? '', 
     );
   }
-
+//converts the DataModel object to a JSON object
   Map<String, dynamic> toJson() {
     return {
        'id': id,
